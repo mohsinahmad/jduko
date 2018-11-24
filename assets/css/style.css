@@ -1,0 +1,24 @@
+body {
+ font-family: 'Noto Nastaliq Urdu', serif;
+
+}
+.usertype{
+    height: 48px!important;
+}
+.radio label, .checkbox label{
+    padding-left: 42px;
+}
+#dataTables-example_length select[name='dataTables-example_length']{
+    padding-bottom: 0px!important;
+    padding-right: 10px!important;
+    padding-left: 0px!important;
+    padding-top: 0px!important;
+}
+    .not-active {
+ pointer-events: none;
+ cursor: default;
+}
+
+
+@import url('http://getbootstrap.com/dist/css/bootstrap.css');
+

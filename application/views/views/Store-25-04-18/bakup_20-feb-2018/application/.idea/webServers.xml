@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="91c20b0d-ad7f-4b92-b1e5-e0542501caed" name="Dar_Ul_Uloom" url="http://accounts.jdukhi.com">
+        <fileTransfer host="accounts.jdukhi.com" port="21">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="21" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
