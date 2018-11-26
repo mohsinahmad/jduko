@@ -4,6 +4,7 @@ class BookModel extends CI_Model
 {
     private $activeyear;
     private $year_status;
+
     public function __construct()
     {
         parent::__construct();
@@ -29,12 +30,14 @@ class BookModel extends CI_Model
             echo '<script>alert("commit")</script>';
         }
     }
+
     public function get_date($date)
     {
         $this->db->select('Qm_date');
         $this->db->where('Sh_date', $date);
         return $this->db->get('calender')->result();
     }
+
     public function get_company()
     {
         $Isadmin = $_SESSION['user'][0]->IsAdmin;
@@ -50,6 +53,7 @@ class BookModel extends CI_Model
         }
         return $this->db->get()->result();
     }
+
     public function get_account($id)
     {
         $this->db->select('account_title.id as acc_id,AccountName');
@@ -58,38 +62,37 @@ class BookModel extends CI_Model
         $this->db->where('chart_of_account.levelId', $id);
         return $this->db->get()->result();
     }
+
     public function save_transaction($company_id, $book_type)
     {
 
 
-
         $Seperate_Series = 0;
         foreach ($_POST['accountId'] as $key => $value) {
-            if($this->year_status->Active == 1) {
-              $this->db->select('chart_of_account.id, chart_of_account_years.Separate_Series');
-            $this->db->join('chart_of_account_years', 'chart_of_account.id = chart_of_account_years.ChartOfAccountId');
-            }else{
+            if ($this->year_status->Active == 1) {
+                $this->db->select('chart_of_account.id, chart_of_account_years.Separate_Series');
+                $this->db->join('chart_of_account_years', 'chart_of_account.id = chart_of_account_years.ChartOfAccountId');
+            } else {
                 $this->db->select('chart_of_account.id, archived_chart_of_account_years.Separate_Series');
-            $this->db->join('archived_chart_of_account_years', 'chart_of_account.id = archived_chart_of_account_years.ChartOfAccountId');            
-            }            
+                $this->db->join('archived_chart_of_account_years', 'chart_of_account.id = archived_chart_of_account_years.ChartOfAccountId');
+            }
             $this->db->where('LevelId', $company_id);
             $this->db->where('AccountId', $value);
             $result[$key] = $this->db->get('chart_of_account')->result();
         }
-                foreach ($result as $item) {            
+        foreach ($result as $item) {
             if ($item[0]->Separate_Series != 0) {
                 $this->db->where('ChartOfAccountId', $item[0]->id);
-                if($this->year_status->Active == 1) {
-                $sep_seq_num[] = $this->db->get('chart_of_account_years')->result();
-                }else{
+                if ($this->year_status->Active == 1) {
+                    $sep_seq_num[] = $this->db->get('chart_of_account_years')->result();
+                } else {
                     $sep_seq_num[] = $this->db->get('archived_chart_of_account_years')->result();
                 }
                 $Seperate_Series = 1;
             }
         }
-            
 
-            
+
         if ($Seperate_Series == 1) {
             $voucher_no = $this->Seprate_serial_VoucherNum($result, $book_type);
         } else {
@@ -97,10 +100,9 @@ class BookModel extends CI_Model
         }
 
 
-            // echo '<pre>';
-            // print_r($sep_seq_num);
-            // exit();
-
+        // echo '<pre>';
+        // print_r($sep_seq_num);
+        // exit();
 
 
         $voucherType = strtoupper($book_type);
@@ -136,12 +138,12 @@ class BookModel extends CI_Model
             $this->db->set('Createdby', $_SESSION['user'][0]->id);
             $this->db->set('CreatedOn', date('Y-m-d H:i:s'));
             $this->db->set('year', $_SESSION['current_year']);
-            if($this->year_status->Active == 1) {
-             $this->db->insert('transactions');
-                } else {
+            if ($this->year_status->Active == 1) {
+                $this->db->insert('transactions');
+            } else {
                 $this->db->insert('archived_transactions');
-                }
-                $seqno++;
+            }
+            $seqno++;
         }
 
         if ($this->db->affected_rows() > 0) {
@@ -150,6 +152,7 @@ class BookModel extends CI_Model
             return false;
         }
     }
+
     public function Seprate_serial_VoucherNum($result, $book_type)
     {
         //$where = 'permanent_vouchernumber is null';
@@ -159,11 +162,11 @@ class BookModel extends CI_Model
                 $this->db->where('VoucherType', $book_type);
                 $this->db->where('Seprate_series_num', $item[0]->Separate_Series);
                 $this->db->where('LinkID', isset($item[0]->id) ? $item[0]->id : $item[0]->LinkID);
-                $this->db->where('is_delete','0');
-               // $this->db->where($where);
-                if($this->year_status->Active == 1) {
-                $voucher = $this->db->get('transactions')->result();
-                }else{
+                $this->db->where('is_delete', '0');
+                // $this->db->where($where);
+                if ($this->year_status->Active == 1) {
+                    $voucher = $this->db->get('transactions')->result();
+                } else {
                     $voucher = $this->db->get('archived_transactions')->result();
                 }
                 break;
@@ -247,32 +250,34 @@ class BookModel extends CI_Model
         $this->db->where('id', $comp_id);
         return $this->db->get('company_structure')->result();
     }
+
     public function get_code($book_type)
     {
         //$where = 'permanent_vouchernumber is null';
         $type = strtoupper($book_type);
         $this->db->select('VoucherType,LevelID,company_structure.IsSerealized');
         $this->db->select_max('VoucherNo');
-        if($this->year_status->Active == 1) {
-                    $this->db->from('transactions');
-                }else{
-                    $this->db->from('archived_transactions');
-                } 
+        if ($this->year_status->Active == 1) {
+            $this->db->from('transactions');
+        } else {
+            $this->db->from('archived_transactions');
+        }
         $this->db->where('is_delete', 0);
         $this->db->where('VoucherType', $type);
         $this->db->where('company_structure.IsSerealized !=', 1);
         //$this->db->where($where);
-        if($this->year_status->Active == 1) {
-        $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
-        }else{
-        $this->db->join('company_structure', 'company_structure.id = archived_transactions.LevelID');
+        if ($this->year_status->Active == 1) {
+            $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
+        } else {
+            $this->db->join('company_structure', 'company_structure.id = archived_transactions.LevelID');
         }
-        return $this->db->get();   
-}
+        return $this->db->get();
+    }
+
     public function getDepartMax($book_type, $comp_id)
     {
-         $where = 'permanent_vouchernumber is null';
-        if($this->year_status->Active == 1) {
+        $where = 'permanent_vouchernumber is null';
+        if ($this->year_status->Active == 1) {
             if ($book_type == 'cr') {
                 $type = strtoupper($book_type);
                 $this->db->select('VoucherType,LevelID,company_structure.IsSerealized');
@@ -384,9 +389,9 @@ class BookModel extends CI_Model
         }
         return $this->db->get();
     }
+
     public function Update_Transactions()
     {
-
 
 
         foreach ($_POST['AccountID'] as $key => $value) {
@@ -397,19 +402,19 @@ class BookModel extends CI_Model
         }
         $arr = array(
             'VoucherType' => $_POST['VoucherType'],
-            'VoucherNo' => $_POST['VoucherNo'],
-            'LevelID' => $_POST['LevelID']
+            'VoucherNo'   => $_POST['VoucherNo'],
+            'LevelID'     => $_POST['LevelID']
         );
-         
-        if($this->year_status->Active == 1) {
-           $this->db->where($arr);
-           $this->db->set('is_delete','1');
+
+        if ($this->year_status->Active == 1) {
+            $this->db->where($arr);
+            $this->db->set('is_delete', '1');
             $this->db->set('UpdatedBy', $_SESSION['user'][0]->id);
             $this->db->set('UpdatedOn', date('Y-m-d H:i:s'));
             $this->db->update('transactions');
         } else {
             $this->db->where($arr);
-            $this->db->set('is_delete','1');
+            $this->db->set('is_delete', '1');
             $this->db->set('UpdatedBy', $_SESSION['user'][0]->id);
             $this->db->set('UpdatedOn', date('Y-m-d H:i:s'));
             $this->db->update('archived_transactions');
@@ -451,8 +456,8 @@ class BookModel extends CI_Model
                 $this->db->set('ChequeDate', $_POST['ChequeDate'][$key]);
                 $this->db->set('UpdatedBy', $_SESSION['user'][0]->id);
                 $this->db->set('UpdatedOn', date('Y-m-d H:i:s'));
-                 
-        if($this->year_status->Active == 1) {
+
+                if ($this->year_status->Active == 1) {
                     $this->db->insert('transactions');
                 } else {
                     // $this->db->set('Year', $this->activeyear);
@@ -468,11 +473,12 @@ class BookModel extends CI_Model
             return false;
         }
     }
+
     public function Per_Update_Transactions()
     {
-            // echo '<pre>';
-            // print_r($_POST);
-            // exit();
+        // echo '<pre>';
+        // print_r($_POST);
+        // exit();
 
         foreach ($_POST['AccountID'] as $key => $value) {
             $this->db->select('id');
@@ -482,19 +488,19 @@ class BookModel extends CI_Model
         }
         $arr = array(
             'VoucherType' => $_POST['VoucherType'],
-            'VoucherNo' => $_POST['VoucherNo'],
-            'LevelID' => $_POST['LevelID']
+            'VoucherNo'   => $_POST['VoucherNo'],
+            'LevelID'     => $_POST['LevelID']
         );
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->where($arr);
-            $this->db->set('is_delete','1');
+            $this->db->set('is_delete', '1');
             $this->db->set('UpdatedBy', $_SESSION['user'][0]->id);
             $this->db->set('UpdatedOn', date('Y-m-d H:i:s'));
             $this->db->update('transactions');
         } else {
             $this->db->where($arr);
-            $this->db->set('is_delete','1');
+            $this->db->set('is_delete', '1');
             $this->db->set('UpdatedBy', $_SESSION['user'][0]->id);
             $this->db->set('UpdatedOn', date('Y-m-d H:i:s'));
             $this->db->update('archived_transactions');
@@ -565,8 +571,8 @@ class BookModel extends CI_Model
                 $this->db->set('ChequeNumber', $_POST['ChequeNumber'][$key]);
                 $this->db->set('ChequeDate', $_POST['ChequeDate'][$key]);
                 $this->db->set('UpdatedBy', $_SESSION['user'][0]->id);
-                $this->db->set('UpdatedOn', date('Y-m-d H:i:s'));                 
-        if($this->year_status->Active == 1) {
+                $this->db->set('UpdatedOn', date('Y-m-d H:i:s'));
+                if ($this->year_status->Active == 1) {
                     $this->db->insert('transactions');
                 } else {
                     // $this->db->set('Year', $this->activeyear);
@@ -582,10 +588,11 @@ class BookModel extends CI_Model
             return false;
         }
     }
+
     public function seq_max($id)
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('VoucherNo,VoucherType');
             $this->db->where('Id', $id);
             $v_num_type = $this->db->get('transactions')->result();
@@ -609,6 +616,7 @@ class BookModel extends CI_Model
             return $this->db->get('archived_transactions')->result();
         }
     }
+
     public function getCurrentBalance($c_id, $b_id)
     {
         $this->db->select('CurrentBalance');
@@ -620,14 +628,15 @@ class BookModel extends CI_Model
     public function check_rec_seg()
     {
         $this->db->select_max('SequenceNo');
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             return $this->db->get('transactions')->result();
         } else {
             // $this->db->where('archived_transactions.Year', $this->activeyear);
             return $this->db->get('archived_transactions')->result();
         }
     }
+
     public function get_books_acc_to_user($id)
     {
         $this->db->select('*');
@@ -637,6 +646,7 @@ class BookModel extends CI_Model
         $this->db->where('account_title.type', 1);
         return $this->db->get()->result();
     }
+
     public function getAccount($id, $a_id)
     {
         $this->db->select('*,chart_of_account.id as c_id');
@@ -646,6 +656,7 @@ class BookModel extends CI_Model
         $this->db->where('AccountId !=', $a_id);
         return $this->db->get()->result();
     }
+
     public function get_account_name($id, $a_id)
     {
         $this->db->select('LevelId,AccountId,CurrentBalance,AccountName');
@@ -655,6 +666,7 @@ class BookModel extends CI_Model
         $this->db->where('chart_of_account.LevelId', $id);
         return $this->db->get()->result();
     }
+
     public function get_company_name($id)
     {
         $this->db->select('*');
@@ -662,6 +674,7 @@ class BookModel extends CI_Model
         $this->db->where('a.id', $id);
         return $this->db->get('company_structure b')->result();
     }
+
     public function get_account_balance($id, $compId)
     {
 
@@ -673,7 +686,7 @@ class BookModel extends CI_Model
         $this->db->where('ChartOfAccountId', $coa_id[0]->id);
         // $result1 = $this->db->query('SELECT year from closing_year')->result();
         // $previous_year_date = $result1[0]->year;
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             // $this->db->where('archived_chart_of_account_years.Year', $this->activeyear);s
             return $this->db->get('chart_of_account_years')->result();
         } else {
@@ -681,6 +694,7 @@ class BookModel extends CI_Model
             return $this->db->get('archived_chart_of_account_years')->result();
         }
     }
+
     public function get_all_for_move_acc($level)
     {
         $OriginAccount = $this->input->post('AccountCode1');
@@ -723,6 +737,7 @@ class BookModel extends CI_Model
         }
         return $result;
     }
+
     public function get_all_transactions($book_type = '', $Level_id = '')
     {
         if ($this->year_status->Active == 1) {
@@ -756,10 +771,11 @@ class BookModel extends CI_Model
         }
         return $this->db->get()->result();
     }
+
     public function get_transactions($book_type, $Level_id)
     {
-        
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
 
             $this->db->select('SUM(transactions.Debit)as debit,transactions.Id as t_id,transactions.VoucherType, 
             transactions.Permanent_VoucherNumber, transactions.VoucherNo, transactions.VoucherDateG, transactions.VoucherDateH, 
@@ -801,8 +817,8 @@ class BookModel extends CI_Model
 
     public function get_per_transactions($book_type, $Level_id)
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('SUM(transactions.Debit)as debit,transactions.Id as t_id,transactions.VoucherType, transactions.Permanent_VoucherNumber, transactions.VoucherNo, transactions.VoucherDateG, transactions.VoucherDateH, transactions.PaidTo, departments.DepartmentName, transactions.Remarks');
             $this->db->from('transactions');
             $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -831,8 +847,8 @@ class BookModel extends CI_Model
 
     public function transactions()
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('*');
             $this->db->from('transactions');
             $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -849,10 +865,10 @@ class BookModel extends CI_Model
 
     public function get_type($id)
     {
-         
+
         $this->db->select('VoucherType');
         $this->db->where('id', $id);
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             return $this->db->get('transactions')->result();
         } else {
             // $this->db->where('archived_transactions.Year', $this->activeyear);
@@ -870,9 +886,9 @@ class BookModel extends CI_Model
     public function get_edit_transaction($id, $company_id)
     {
 
-            $is_permit = $this->uri->segment(6);
-            $data = $this->getVoucherAndType($id); 
-            if($this->year_status->Active == 1) {
+        $is_permit = $this->uri->segment(6);
+        $data = $this->getVoucherAndType($id);
+        if ($this->year_status->Active == 1) {
             $this->db->select('transactions.TaxDebit,transactions.IsReverse,transactions.LinkID,transactions.CreatedOn,
             transactions.Createdby,transactions.Permanent_VoucherDateH, transactions.Permanent_VoucherDateG, 
             transactions.Permanent_VoucherNumber, transactions.Id as t_id,company_structure.id as level_id,
@@ -889,12 +905,11 @@ class BookModel extends CI_Model
             $this->db->where('transactions.VoucherType', $data[0]->VoucherType);
             $this->db->where('transactions.Seprate_series_num', $data[0]->Seprate_series_num);
             $this->db->where('transactions.LevelID', $company_id);
-            $this->db->where('is_delete','0');
-            if($is_permit == '0'){
-                    $where = 'Permanent_VoucherNumber IS NULL';
-                    $this->db->where($where);
-            }
-            else{
+            $this->db->where('is_delete', '0');
+            if ($is_permit == '0') {
+                $where = 'Permanent_VoucherNumber IS NULL';
+                $this->db->where($where);
+            } else {
                 $where = 'Permanent_VoucherNumber IS NOT NULL';
                 $this->db->where($where);
             }
@@ -910,12 +925,11 @@ class BookModel extends CI_Model
             $this->db->where('archived_transactions.LevelID', $company_id);
             $this->db->where('archived_transactions.is_delete', '0');
             // $this->db->where('archived_transactions.Year', $this->activeyear);
-            if($is_permit == '0'){
+            if ($is_permit == '0') {
 
-                    $where = 'Permanent_VoucherNumber IS NULL';
-                    $this->db->where($where);
-            }
-            else{
+                $where = 'Permanent_VoucherNumber IS NULL';
+                $this->db->where($where);
+            } else {
 
                 $where = 'Permanent_VoucherNumber IS NOT NULL';
                 $this->db->where($where);
@@ -927,8 +941,8 @@ class BookModel extends CI_Model
     public function getVoucherAndType($id)
     {
 
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('VoucherNo, VoucherType, Seprate_series_num');
             $this->db->where('transactions.id', $id);
             return $this->db->get('transactions')->result();
@@ -939,17 +953,18 @@ class BookModel extends CI_Model
             return $this->db->get('archived_transactions')->result();
         }
     }
+
     public function delete_transaction($voucherno, $voucherType, $levelid)
     {
         $delete = array('VoucherNo' => $voucherno, 'VoucherType' => strtoupper($voucherType), 'LevelID' => $levelid);
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->where($delete);
-            $this->db->set('is_delete','1');
+            $this->db->set('is_delete', '1');
             $this->db->update('transactions');
         } else {
             $this->db->where($delete);
-            $this->db->set('is_delete','1');
+            $this->db->set('is_delete', '1');
             $this->db->update('archived_transactions');
         }
         if ($this->db->affected_rows() > 0) {
@@ -959,29 +974,31 @@ class BookModel extends CI_Model
         }
     }
 
-    public function  get_hijri_date($date = ''){
+    public function get_hijri_date($date = '')
+    {
 
-        $hijri_date = $this->db->get_where('calender',array(
-            'Sh_date'=>$date,
+        $hijri_date = $this->db->get_where('calender', array(
+            'Sh_date' => $date,
         ))->result();
         return $hijri_date;
 
     }
+
     public function get_transaction_by_date($book_type, $id, $to, $from)
     {
 
         $result1 = $this->db->query('SELECT year from closing_year')->result();
         $previous_year_date = $result1[0]->year;
         $hijri_date = $this->get_hijri_date($from);
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             $this->db->select('SUM(transactions.Debit) as debit,transactions.Id as t_id,
             transactions.VoucherType,transactions.Seprate_series_num, transactions.Permanent_VoucherNumber, transactions.VoucherNo, 
             transactions.VoucherDateG,transactions.LevelID,transactions.VoucherDateH, transactions.PaidTo, departments.DepartmentName, 
             transactions.Remarks');
             $this->db->from('transactions');
-            $this->db->join('company_structure', 'company_structure.id = transactions.LevelID','left');
-            $this->db->join('account_title', 'account_title.id = transactions.AccountID','left');
-            $this->db->join('departments', 'departments.id = transactions.DepartmentId','left');
+            $this->db->join('company_structure', 'company_structure.id = transactions.LevelID', 'left');
+            $this->db->join('account_title', 'account_title.id = transactions.AccountID', 'left');
+            $this->db->join('departments', 'departments.id = transactions.DepartmentId', 'left');
             $array = array('transactions.Permanent_VoucherNumber' => NULL, 'transactions.VoucherType' => $book_type, 'transactions.LevelID' => $id);
             $this->db->where($array);
             $this->db->where("transactions.VoucherDateG BETWEEN '" . $to . "' AND '" . $from . "'", NULL, FALSE);
@@ -992,21 +1009,22 @@ class BookModel extends CI_Model
             archived_transactions.VoucherDateG, archived_transactions.VoucherDateH, archived_transactions.PaidTo,archived_transactions.LevelID,departments.DepartmentName, 
             archived_transactions.Remarks,archived_transactions.Seprate_series_num');
             $this->db->from('archived_transactions');
-            $this->db->join('company_structure', 'company_structure.id = archived_transactions.LevelID','left');
-            $this->db->join('account_title', 'account_title.id = archived_transactions.AccountID','left');
-            $this->db->join('departments', 'departments.id = archived_transactions.DepartmentId','left');
+            $this->db->join('company_structure', 'company_structure.id = archived_transactions.LevelID', 'left');
+            $this->db->join('account_title', 'account_title.id = archived_transactions.AccountID', 'left');
+            $this->db->join('departments', 'departments.id = archived_transactions.DepartmentId', 'left');
             $array = array('archived_transactions.Permanent_VoucherNumber' => NULL, 'archived_transactions.VoucherType' => $book_type, 'archived_transactions.LevelID' => $id);
             $this->db->where($array);
             $this->db->where("archived_transactions.VoucherDateG BETWEEN '" . $to . "' AND '" . $from . "'", NULL, FALSE);
-           // $this->db->where('archived_transactions.Year', $this->activeyear);
+            // $this->db->where('archived_transactions.Year', $this->activeyear);
             $this->db->group_by('archived_transactions.VoucherNo');
         }
         return $this->db->get()->result();
     }
+
     public function get_transaction_date($to, $from, $book_type = '', $Level_id = '') /*for dashborad only*/
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('SUM(transactions.Debit) as debit,transactions.Id as t_id,transactions.VoucherType, transactions.Permanent_VoucherNumber, transactions.VoucherNo, transactions.VoucherDateG, transactions.VoucherDateH, transactions.PaidTo, departments.DepartmentName, transactions.Remarks');
             $this->db->from('transactions');
             $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -1067,8 +1085,8 @@ class BookModel extends CI_Model
 
     public function get_by_voucher_no($code = '', $type, $id)
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('*,transactions.Id as t_id');
             $this->db->from('transactions');
             $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -1091,8 +1109,8 @@ class BookModel extends CI_Model
 
     public function getVoucher($voucherno = '') /*ya function dashboard pe voucher ky search ky liny ha*/
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('debit,transactions.Id as t_id,transactions.VoucherType, transactions.Permanent_VoucherNumber, transactions.VoucherNo, transactions.VoucherDateG, transactions.VoucherDateH, transactions.PaidTo, departments.DepartmentName, transactions.Remarks');
             $this->db->from('transactions');
             $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -1113,8 +1131,8 @@ class BookModel extends CI_Model
 
     public function get_by_per_voucher_no($code = '', $type, $id)
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('SUM(transactions.Debit)as debit,transactions.Id as t_id,transactions.VoucherType, transactions.Permanent_VoucherNumber, transactions.VoucherNo, transactions.VoucherDateG, transactions.VoucherDateH, transactions.PaidTo, departments.DepartmentName, transactions.Remarks');
             $this->db->from('transactions');
             $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -1146,8 +1164,8 @@ class BookModel extends CI_Model
         $acc_code = $this->db->get('account_title')->result();
         if (!empty($acc_code)) {
             foreach ($acc_code as $ac_c) {
-                 
-        if($this->year_status->Active == 1) {
+
+                if ($this->year_status->Active == 1) {
                     $this->db->select('*,transactions.Id as t_id,transactions.Debit as debit');
                     $this->db->from('transactions');
                     $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -1177,8 +1195,8 @@ class BookModel extends CI_Model
 
     public function get_transaction_by_VouchernoAndType($voucherno = '', $book_type = '', $Level_id = '')
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('SUM(transactions.Debit)as debit,transactions.Id as t_id,transactions.VoucherType, transactions.Permanent_VoucherNumber, transactions.VoucherNo, transactions.VoucherDateG, transactions.VoucherDateH, transactions.PaidTo, departments.DepartmentName, transactions.Remarks');
             $this->db->from('transactions');
             $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -1227,8 +1245,8 @@ class BookModel extends CI_Model
         $acc_code = $this->db->get('account_title')->result();
         if (!empty($acc_code)) {
             foreach ($acc_code as $ac_c) {
-                 
-        if($this->year_status->Active == 1) {
+
+                if ($this->year_status->Active == 1) {
                     $this->db->select('*,transactions.Id as t_id');
                     $this->db->from('transactions');
                     $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -1265,7 +1283,7 @@ class BookModel extends CI_Model
     public function get_move_transaction($id)
 
     {
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             $this->db->select('VoucherType,VoucherNo,LevelID,Seprate_series_num,VoucherType');
             $this->db->where('Id', $id);
             $this->db->from('transactions');
@@ -1307,9 +1325,8 @@ class BookModel extends CI_Model
     {
 
 
-            // print_r($_POST);
-            // exit();
-
+        // print_r($_POST);
+        // exit();
 
 
         $company_id = $_POST['level'];
@@ -1338,7 +1355,7 @@ class BookModel extends CI_Model
                 $debit = $accnt->Debit;
                 $credit = '';
                 $balanceUpdated = $this->update_current_balance($ch_id[0]->id, $balance[0]->CurrentBalance, $debit, $credit);
-        } else {
+            } else {
                 $debit = '';
                 $credit = $accnt->Credit;
                 $balanceUpdated = $this->update_current_balance($ch_id[0]->id, $balance[0]->CurrentBalance, $debit, $credit);
@@ -1359,24 +1376,23 @@ class BookModel extends CI_Model
         }
         // $result1 = $this->db->query('SELECT year from closing_year')->result();
         // $previous_year_date = $result1[0]->year;
-       
+
         $where = 'permanent_vouchernumber is null';
         $this->db->where('VoucherNo', $v_no);
         $this->db->where('VoucherType', $book_type);
         $this->db->where('LevelID', $company_id);
-        $this->db->where('is_delete','0');
+        $this->db->where('is_delete', '0');
         $this->db->where('Seprate_series_num', $Seprate_series_num);
         $this->db->where($where);
         $this->db->set('Permanent_VoucherNumber', $voucher_no);
         $this->db->set('Permanent_VoucherDateG', $Edate);
-        $this->db->set('Permanent_VoucherDateH', $Idate);        
-        if($this->year_status->Active == 1) {
+        $this->db->set('Permanent_VoucherDateH', $Idate);
+        if ($this->year_status->Active == 1) {
             $this->db->update('transactions');
-        }
-        else{
+        } else {
             $this->db->update('archived_transactions');
         }
-       //echo $this->db->last_query();
+        //echo $this->db->last_query();
         if ($this->db->affected_rows() > 0) {
             if (isset($ChequeNumber)) {
                 foreach ($ChequeNumber as $key => $value) {
@@ -1406,14 +1422,13 @@ class BookModel extends CI_Model
                 $this->db->select('IFNULL(MAX(`Permanent_VoucherNumber`),0) AS `Permanent_VoucherNumber`');
                 $this->db->where('VoucherType', $book_type);
                 $this->db->where('LinkID', $item->LinkID);
-                $this->db->where('is_delete','0');
+                $this->db->where('is_delete', '0');
                 $this->db->where('Seprate_series_num', $Seprate_series_num);
                 // $result1 = $this->db->query('SELECT year from closing_year')->result();
                 // $previous_year_date = $result1[0]->year;
-                if($this->year_status->Active == 1) {
+                if ($this->year_status->Active == 1) {
                     $voucher = $this->db->get('transactions')->result();
-                }
-                else {
+                } else {
                     $voucher = $this->db->get('archived_transactions')->result();
                 }
                 break;
@@ -1423,6 +1438,7 @@ class BookModel extends CI_Model
         $v_number = $voucher_Num + 1;
         return str_pad($v_number, 5, 0, STR_PAD_LEFT);
     }
+
     public function GetPerminentVoucherNumber($company_id, $book_type, $type)
     {
 
@@ -1436,7 +1452,7 @@ class BookModel extends CI_Model
             $voucherNo = $code->result();
             //return $voucherNo;
             if (empty($voucherNo[0]->Permanent_VoucherNumber)) {
-                    if ($book_type == $type) {
+                if ($book_type == $type) {
                     // $voucherType = 'CR';
                     $vouchNumb = 1;
                     $voucher_no = str_pad($vouchNumb, 5, 0, STR_PAD_LEFT);
@@ -1480,19 +1496,20 @@ class BookModel extends CI_Model
                     // $voucherType = 'CP';
                     $voucher_no = $vouchNumber;
                 }
-               // $voucher_no ++;
+                // $voucher_no ++;
             }
         }
         return $voucher_no;
     }
+
     public function get_max_tranCount($voucher_no, $level_id, $type)
     {
 
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             $this->db->where('VoucherNo', $voucher_no);
             $this->db->where('LevelID', $level_id);
             $this->db->where('voucherType', $type);
-            $this->db->where('is_delete','0');
+            $this->db->where('is_delete', '0');
             //$this->db->where($where);
             // $this->db->where('transactions.Year', $this->activeyear);
             $this->db->select_max('count');
@@ -1501,12 +1518,13 @@ class BookModel extends CI_Model
             $this->db->where('VoucherNo', $voucher_no);
             $this->db->where('LevelID', $level_id);
             $this->db->where('voucherType', $type);
-            $this->db->where('is_delete','0');
+            $this->db->where('is_delete', '0');
             // $this->db->where('archived_transactions.Year', $this->activeyear);
             $this->db->select_max('count');
-           return $this->db->get('archived_transactions')->result();
+            return $this->db->get('archived_transactions')->result();
         }
     }
+
     public function get_chart_of_account_id($acc_id, $level_id)
     {
         $this->db->select('id');
@@ -1514,6 +1532,7 @@ class BookModel extends CI_Model
         $this->db->where('LevelId', $level_id);
         return $this->db->get('chart_of_account')->result();
     }
+
     public function update_current_balance($id, $balance, $debit = '', $credit = '', $per = '')
     {
 //        echo 'agaya';
@@ -1529,47 +1548,48 @@ class BookModel extends CI_Model
         }
         $this->db->where('ChartOfAccountId', $id);
         $this->db->set('CurrentBalance', $updatedBalance);
-       if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             return $this->db->update('chart_of_account_years');
-        }
-        else {
+        } else {
             return $this->db->update('archived_chart_of_account_years');
         }
     }
+
     public function get_transaction_account($v_no, $book_type, $company_id, $Seprate_series_num)
     {
         //$where = 'permanent_vouchernumber is null';
-        if($this->year_status->Active == 1) {           
+        if ($this->year_status->Active == 1) {
             $this->db->select('LinkID,Separate_Series,Debit,Credit,AccountID');
             $this->db->join('chart_of_account_years', 'transactions.LinkID = chart_of_account_years.ChartOfAccountId');
             $this->db->where('transactions.VoucherNo', $v_no);
             $this->db->where('transactions.VoucherType', $book_type);
             $this->db->where('transactions.LevelID', $company_id);
-            $this->db->where('is_delete','0');
+            $this->db->where('is_delete', '0');
             //    $this->db->where($where);
             $this->db->where('transactions.Seprate_series_num', $Seprate_series_num);
             return $this->db->get('transactions')->result();
         } else {
-             $this->db->select('LinkID,Separate_Series,Debit,Credit,AccountID');
+            $this->db->select('LinkID,Separate_Series,Debit,Credit,AccountID');
             $this->db->join('archived_chart_of_account_years', 'archived_transactions.LinkID = archived_chart_of_account_years.ChartOfAccountId');
             $this->db->where('archived_transactions.VoucherNo', $v_no);
             $this->db->where('archived_transactions.VoucherType', $book_type);
             $this->db->where('archived_transactions.LevelID', $company_id);
-            $this->db->where('is_delete','0');
-               // $this->db->where($where);
+            $this->db->where('is_delete', '0');
+            // $this->db->where($where);
             $this->db->where('archived_transactions.Seprate_series_num', $Seprate_series_num);
-            return $this->db->get('archived_transactions')->result();            
+            return $this->db->get('archived_transactions')->result();
         }
     }
+
     public function get_max_permanent($book_type)
     {
         $type = strtoupper($book_type);
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             $this->db->select('VoucherType,LevelID,company_structure.IsSerealized');
             $this->db->select_max('Permanent_VoucherNumber');
             $this->db->from('transactions');
             $this->db->where('VoucherType', $type);
-            $this->db->where('is_delete','0');
+            $this->db->where('is_delete', '0');
             $this->db->where('company_structure.IsSerealized !=', 1);
             $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
         } else {
@@ -1578,42 +1598,43 @@ class BookModel extends CI_Model
             $this->db->select_max('Permanent_VoucherNumber');
             $this->db->from('archived_transactions');
             $this->db->where('VoucherType', $type);
-            $this->db->where('is_delete','0');
+            $this->db->where('is_delete', '0');
             $this->db->where('company_structure.IsSerealized !=', 1);
             // $this->db->where('archived_transactions.Year', $this->activeyear);
             $this->db->join('company_structure', 'company_structure.id = archived_transactions.LevelID');
         }
         return $this->db->get();
     }
+
     public function get_dept_max_permanet($book_type, $comp_id)
     {
         $type = strtoupper($book_type);
-        if($this->year_status->Active == 1) {
-                $this->db->select('VoucherType,LevelID,company_structure.IsSerealized');
-                $this->db->select_max('Permanent_VoucherNumber');
-                $this->db->from('transactions');
-                $this->db->where('VoucherType', $type);
-                $this->db->where('is_delete','0');
-                $this->db->where('transactions.LevelID', $comp_id);
-                $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
-            } else {
-                $this->db->select('VoucherType,LevelID,company_structure.IsSerealized');
-                $this->db->select_max('Permanent_VoucherNumber');
-                $this->db->from('archived_transactions');
-                $this->db->where('VoucherType', $type);
-                $this->db->where('is_delete','0');
-                $this->db->where('archived_transactions.LevelID', $comp_id);
-                // $this->db->where('archived_transactions.Year', $this->activeyear);
-                $this->db->join('company_structure', 'company_structure.id = archived_transactions.LevelID');
-            }
+        if ($this->year_status->Active == 1) {
+            $this->db->select('VoucherType,LevelID,company_structure.IsSerealized');
+            $this->db->select_max('Permanent_VoucherNumber');
+            $this->db->from('transactions');
+            $this->db->where('VoucherType', $type);
+            $this->db->where('is_delete', '0');
+            $this->db->where('transactions.LevelID', $comp_id);
+            $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
+        } else {
+            $this->db->select('VoucherType,LevelID,company_structure.IsSerealized');
+            $this->db->select_max('Permanent_VoucherNumber');
+            $this->db->from('archived_transactions');
+            $this->db->where('VoucherType', $type);
+            $this->db->where('is_delete', '0');
+            $this->db->where('archived_transactions.LevelID', $comp_id);
+            // $this->db->where('archived_transactions.Year', $this->activeyear);
+            $this->db->join('company_structure', 'company_structure.id = archived_transactions.LevelID');
+        }
         return $this->db->get();
     }
 
     public function get_permanent_voucher($book_type, $Level_id)
     {
 
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('transactions.Seprate_series_num,SUM(transactions.Debit)as debit,transactions.Id as t_id,transactions.VoucherType, transactions.Permanent_VoucherNumber, transactions.VoucherNo, transactions.Permanent_VoucherDateG, transactions.Permanent_VoucherDateH, transactions.PaidTo, departments.DepartmentName, transactions.Remarks');
             $this->db->from('transactions');
             $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -1622,7 +1643,7 @@ class BookModel extends CI_Model
             $this->db->where('transactions.Permanent_VoucherNumber !=', NUll);
             $this->db->where('transactions.LevelID', $Level_id);
             $this->db->where('transactions.VoucherType', $book_type);
-            $this->db->where('is_delete','0');
+            $this->db->where('is_delete', '0');
             //$this->db->like('transactions.VoucherDateH', $this->session->userdata('current_year'));
             $this->db->group_by('transactions.permanent_vouchernumber');
             $this->db->group_by('transactions.Seprate_series_num');
@@ -1636,7 +1657,7 @@ class BookModel extends CI_Model
             $this->db->where('archived_transactions.Permanent_VoucherNumber !=', NUll);
             $this->db->where('archived_transactions.LevelID', $Level_id);
             $this->db->where('archived_transactions.VoucherType', $book_type);
-            $this->db->where('is_delete','0');
+            $this->db->where('is_delete', '0');
             // $this->db->where('archived_transactions.Year', $this->activeyear);
             //$this->db->like('archived_transactions.VoucherDateH', $this->session->userdata('current_year'));
             $this->db->group_by('archived_transactions.permanent_vouchernumber');
@@ -1649,9 +1670,9 @@ class BookModel extends CI_Model
     public function update_Permanent_Voucher($type, $TokeepVoucher, $level_id)
     {
 
-            //     echo '<pre>';
-            // print_r($_POST);
-            // exit();
+        //     echo '<pre>';
+        // print_r($_POST);
+        // exit();
 
         if ($type == 'cr') {
             foreach ($_POST['data']['toTemp'] as $key => $value) {
@@ -1798,10 +1819,11 @@ class BookModel extends CI_Model
             }
         }
     }
+
     public function copy_voucher($type, $level_id)
     {
-         
-        if($this->year_status->Active == 1){
+
+        if ($this->year_status->Active == 1) {
             if ($type == 'cr') {
                 $trans[] = '';
                 $seqno = 1;
@@ -1810,7 +1832,7 @@ class BookModel extends CI_Model
                     $this->db->where('VoucherNo', $_POST['vouch_no']['VoucherNo'][$key]);
                     $this->db->where('VoucherType', $type);
                     $this->db->where('LevelID', $level_id);
-                    $this->db->where("is_delete",'0');
+                    $this->db->where("is_delete", '0');
                     $this->db->where('Seprate_series_num', $_POST['Seprate_series']['Seprate_series'][$key]);
                     $trans[$key] = $this->db->get('transactions')->result();
                     if ($_POST['Seprate_series']['Seprate_series'][$key] != 0) {
@@ -1856,7 +1878,7 @@ class BookModel extends CI_Model
                     $this->db->where('VoucherNo', $_POST['vouch_no']['VoucherNo'][$key]);
                     $this->db->where('VoucherType', $type);
                     $this->db->where('LevelID', $level_id);
-                    $this->db->where("is_delete",'0');
+                    $this->db->where("is_delete", '0');
                     $this->db->where('Seprate_series_num', $_POST['Seprate_series']['Seprate_series'][$key]);
                     $trans[$key] = $this->db->get('transactions')->result();
                     if ($_POST['Seprate_series']['Seprate_series'][$key] != 0) {
@@ -1877,7 +1899,7 @@ class BookModel extends CI_Model
                         $this->db->set('VoucherDateH', $data->VoucherDateH);
                         $this->db->set('ChequeNumber', $data->ChequeNumber);
                         $this->db->set('ChequeDate', $data->ChequeDate);
-                   isset($data->Separate_Series) ? $this->db->set('Seprate_series_num', $data->Separate_Series) : '';
+                        isset($data->Separate_Series) ? $this->db->set('Seprate_series_num', $data->Separate_Series) : '';
                         isset($data->DepartmentId) ? $this->db->set('DepartmentId', $data->DepartmentId) : '';
                         isset($data->Description) ? $this->db->set('Description', $data->Description) : '';
                         isset($data->Debit) ? $this->db->set('Debit', $data->Debit) : '';
@@ -1902,7 +1924,7 @@ class BookModel extends CI_Model
                     $this->db->where('VoucherNo', $_POST['vouch_no']['VoucherNo'][$key]);
                     $this->db->where('VoucherType', $type);
                     $this->db->where('LevelID', $level_id);
-                    $this->db->where("is_delete",'0');
+                    $this->db->where("is_delete", '0');
                     $this->db->where('Seprate_series_num', $_POST['Seprate_series']['Seprate_series'][$key]);
                     $trans[$key] = $this->db->get('transactions')->result();
                     if ($_POST['Seprate_series']['Seprate_series'][$key] != 0) {
@@ -1923,7 +1945,7 @@ class BookModel extends CI_Model
                         $this->db->set('VoucherDateH', $data->VoucherDateH);
                         $this->db->set('ChequeNumber', $data->ChequeNumber);
                         $this->db->set('ChequeDate', $data->ChequeDate);
-                    isset($data->Separate_Series) ? $this->db->set('Seprate_series_num', $data->Separate_Series) : '';
+                        isset($data->Separate_Series) ? $this->db->set('Seprate_series_num', $data->Separate_Series) : '';
                         isset($data->DepartmentId) ? $this->db->set('DepartmentId', $data->DepartmentId) : '';
                         isset($data->Description) ? $this->db->set('Description', $data->Description) : '';
                         isset($data->Debit) ? $this->db->set('Debit', $data->Debit) : '';
@@ -1947,7 +1969,7 @@ class BookModel extends CI_Model
                     $this->db->select('*,Seprate_series_num as Separate_Series');
                     $this->db->where('VoucherNo', $_POST['vouch_no']['VoucherNo'][$key]);
                     $this->db->where('VoucherType', $type);
-                    $this->db->where("is_delete",'0');
+                    $this->db->where("is_delete", '0');
                     $this->db->where('LevelID', $level_id);
                     $this->db->where('Seprate_series_num', $_POST['Seprate_series']['Seprate_series'][$key]);
                     $trans[$key] = $this->db->get('transactions')->result();
@@ -1972,7 +1994,7 @@ class BookModel extends CI_Model
                         $this->db->set('VoucherDateH', $data->VoucherDateH);
                         $this->db->set('ChequeNumber', $data->ChequeNumber);
                         $this->db->set('ChequeDate', $data->ChequeDate);
-                    isset($data->Separate_Series) ? $this->db->set('Seprate_series_num', $data->Separate_Series) : '';
+                        isset($data->Separate_Series) ? $this->db->set('Seprate_series_num', $data->Separate_Series) : '';
                         isset($data->DepartmentId) ? $this->db->set('DepartmentId', $data->DepartmentId) : '';
                         isset($data->Description) ? $this->db->set('Description', $data->Description) : '';
                         isset($data->Debit) ? $this->db->set('Debit', $data->Debit) : '';
@@ -1997,7 +2019,7 @@ class BookModel extends CI_Model
                     $this->db->where('VoucherNo', $_POST['vouch_no']['VoucherNo'][$key]);
                     $this->db->where('VoucherType', $type);
                     $this->db->where('LevelID', $level_id);
-                    $this->db->where("is_delete",'0');
+                    $this->db->where("is_delete", '0');
                     $trans[$key] = $this->db->get('transactions')->result();
                     $voucher_no = $this->get_voucher_no($type, $level_id, 'jv');
                     foreach ($trans[$key] as $key => $data) {
@@ -2038,7 +2060,7 @@ class BookModel extends CI_Model
                     $this->db->where('VoucherNo', $_POST['vouch_no']['VoucherNo'][$key]);
                     $this->db->where('VoucherType', $type);
                     $this->db->where('LevelID', $level_id);
-                    $this->db->where("is_delete",'0');
+                    $this->db->where("is_delete", '0');
                     $trans[$key] = $this->db->get('archived_transactions')->result();
                     $voucher_no = $this->get_voucher_no($type, $level_id, 'cr');
                     foreach ($trans[$key] as $key => $data) {
@@ -2077,7 +2099,7 @@ class BookModel extends CI_Model
                     $this->db->where('VoucherNo', $_POST['vouch_no']['VoucherNo'][$key]);
                     $this->db->where('VoucherType', $type);
                     $this->db->where('LevelID', $level_id);
-                    $this->db->where("is_delete",'0');
+                    $this->db->where("is_delete", '0');
                     $trans[$key] = $this->db->get('archived_transactions')->result();
                     $voucher_no = $this->get_voucher_no($type, $level_id, 'cp');
                     foreach ($trans[$key] as $key => $data) {
@@ -2116,7 +2138,7 @@ class BookModel extends CI_Model
                     $this->db->where('VoucherNo', $_POST['vouch_no']['VoucherNo'][$key]);
                     $this->db->where('VoucherType', $type);
                     $this->db->where('LevelID', $level_id);
-                    $this->db->where("is_delete",'0');
+                    $this->db->where("is_delete", '0');
                     $trans[$key] = $this->db->get('archived_transactions')->result();
                     $voucher_no = $this->get_voucher_no($type, $level_id, 'br');
                     foreach ($trans[$key] as $key => $data) {
@@ -2163,7 +2185,7 @@ class BookModel extends CI_Model
                     $this->db->where('VoucherNo', $_POST['vouch_no']['VoucherNo'][$key]);
                     $this->db->where('VoucherType', $type);
                     $this->db->where('LevelID', $level_id);
-                    $this->db->where("is_delete",'0');
+                    $this->db->where("is_delete", '0');
                     $trans[$key] = $this->db->get('archived_transactions')->result();
                     $voucher_no = $this->get_voucher_no($type, $level_id, 'bp');
 
@@ -2211,7 +2233,7 @@ class BookModel extends CI_Model
                     $this->db->where('VoucherNo', $_POST['vouch_no']['VoucherNo'][$key]);
                     $this->db->where('VoucherType', $type);
                     $this->db->where('LevelID', $level_id);
-                    $this->db->where("is_delete",'0');
+                    $this->db->where("is_delete", '0');
                     $trans[$key] = $this->db->get('archived_transactions')->result();
                     $voucher_no = $this->get_voucher_no($type, $level_id, 'jv');
 
@@ -2258,15 +2280,15 @@ class BookModel extends CI_Model
         }
     }
 
-    public function get_permanent_trans_bydate($from,$book_type, $id, $to)
+    public function get_permanent_trans_bydate($from, $book_type, $id, $to)
     {
 
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             $this->db->select('SUM(transactions.Debit) as debit,transactions.Id as t_id,transactions.VoucherType, transactions.Permanent_VoucherNumber, transactions.VoucherNo, transactions.Permanent_VoucherDateG, transactions.Permanent_VoucherDateH, transactions.PaidTo,transactions.LevelId, departments.DepartmentName,transactions.Seprate_series_num, transactions.Remarks');
             $this->db->from('transactions');
-            $this->db->join('company_structure', 'company_structure.id = transactions.LevelID','left');
-            $this->db->join('account_title', 'account_title.id = transactions.AccountID','left');
-            $this->db->join('departments', 'departments.id = transactions.DepartmentId','left');
+            $this->db->join('company_structure', 'company_structure.id = transactions.LevelID', 'left');
+            $this->db->join('account_title', 'account_title.id = transactions.AccountID', 'left');
+            $this->db->join('departments', 'departments.id = transactions.DepartmentId', 'left');
             $array = array('transactions.VoucherType' => $book_type, 'transactions.LevelID' => $id);
             $this->db->where($array);
             $this->db->where("transactions.Permanent_VoucherDateG BETWEEN '" . $to . "' AND '" . $from . "'", NULL, FALSE);
@@ -2274,11 +2296,11 @@ class BookModel extends CI_Model
         } else {
             $this->db->select('SUM(archived_transactions.Debit) as debit,archived_transactions.Id as t_id,archived_transactions.VoucherType, archived_transactions.Permanent_VoucherNumber, archived_transactions.VoucherNo, archived_transactions.Permanent_VoucherDateG, archived_transactions.Permanent_VoucherDateH,archived_transactions.Seprate_series_num, archived_transactions.PaidTo, departments.DepartmentName, archived_transactions.Remarks,
                 archived_transactions.LevelId'
-        );
+            );
             $this->db->from('archived_transactions');
-            $this->db->join('company_structure', 'company_structure.id = archived_transactions.LevelID','left');
-            $this->db->join('account_title', 'account_title.id = archived_transactions.AccountID','left');
-            $this->db->join('departments', 'departments.id = archived_transactions.DepartmentId','left');
+            $this->db->join('company_structure', 'company_structure.id = archived_transactions.LevelID', 'left');
+            $this->db->join('account_title', 'account_title.id = archived_transactions.AccountID', 'left');
+            $this->db->join('departments', 'departments.id = archived_transactions.DepartmentId', 'left');
             $array = array('archived_transactions.VoucherType' => $book_type, 'archived_transactions.LevelID' => $id);
             $this->db->where($array);
             $this->db->where("archived_transactions.Permanent_VoucherDateG BETWEEN '" . $to . "' AND '" . $from . "'", NULL, FALSE);
@@ -2298,8 +2320,8 @@ class BookModel extends CI_Model
         $acc_code = $this->db->get('account_title')->result();
         if (!empty($acc_code)) {
             foreach ($acc_code as $ac_c) {
-                 
-        if($this->year_status->Active == 1) {
+
+                if ($this->year_status->Active == 1) {
                     $this->db->select('SUM(transactions.Debit) as debit,transactions.Id as t_id,transactions.VoucherType, transactions.Permanent_VoucherNumber, transactions.VoucherNo, transactions.Permanent_VoucherDateG, transactions.Permanent_VoucherDateH, transactions.PaidTo, departments.DepartmentName, transactions.Remarks');
                     $this->db->from('transactions');
                     $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -2340,8 +2362,8 @@ class BookModel extends CI_Model
         $acc_code = $this->db->get('account_title')->result();
         if (!empty($acc_code)) {
             foreach ($acc_code as $ac_c) {
-                 
-        if($this->year_status->Active == 1) {
+
+                if ($this->year_status->Active == 1) {
                     $this->db->select('SUM(transactions.Debit) as debit,transactions.Id as t_id,transactions.VoucherType, transactions.Permanent_VoucherNumber, transactions.VoucherNo, transactions.Permanent_VoucherDateG, transactions.Permanent_VoucherDateH, transactions.PaidTo, departments.DepartmentName, transactions.Remarks');
                     $this->db->from('transactions');
                     $this->db->join('company_structure', 'company_structure.id = transactions.LevelID');
@@ -2375,8 +2397,8 @@ class BookModel extends CI_Model
     {
         $this->db->select('LevelID');
         $this->db->where('Id', $id);
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             return $this->db->get('transactions')->result();
         } else {
             // $this->db->where('archived_transactions.Year', $this->activeyear);
@@ -2394,15 +2416,16 @@ class BookModel extends CI_Model
         $this->db->where('id', $tran_id);
         $this->db->where('LevelID', $level_id);
         $this->db->where('is_delete', '0');
-        if($this->year_status->Active == 1) {
-           // $this->db->where('transactions.Year', $this->activeyear);
+        if ($this->year_status->Active == 1) {
+            // $this->db->where('transactions.Year', $this->activeyear);
             return $this->db->get('transactions')->result();
         } else {
-           // $this->db->where('archived_transactions.Year', $this->activeyear);
+            // $this->db->where('archived_transactions.Year', $this->activeyear);
             return $this->db->get('archived_transactions')->result();
         }
     }
-    public function get_voucher($vouch_no, $vouch_type, $level_id, $Seprate_series_num,$is_permit='')
+
+    public function get_voucher($vouch_no, $vouch_type, $level_id, $Seprate_series_num, $is_permit = '')
     {
 
         // $this->db->select('CASE WHEN transactions.Debit > 0 THEN 1 ELSE 2 END AS amounttype,transactions.ChequeNumber,transactions.ChequeDate,company_structure.ParentCode as Comp_Parent,company_structure.LevelName,transactions.PaidTo,transactions.Remarks,transactions.Description,transactions.Debit,transactions.Credit,
@@ -2429,16 +2452,15 @@ class BookModel extends CI_Model
         // echo $is_permit;
         // exit()
         $where = '';
-        if($is_permit == ''){
+        if ($is_permit == '') {
             $where .= 'AND Permanent_VoucherNumber IS NULL';
             // echo 'true';
-        }
-        else{
-           $where =  'and Permanent_VoucherNumber = '.$is_permit.'';
-           // echo 'false'.$is_permit;
+        } else {
+            $where = 'and Permanent_VoucherNumber = ' . $is_permit . '';
+            // echo 'false'.$is_permit;
         }
         // exit();
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             $query = $this->db->query("SELECT 
             CASE WHEN transactions.Debit > 0 THEN 1 ELSE 2 END AS amounttype,
             `transactions`.`ChequeNumber`, `transactions`.`ChequeDate`, 
@@ -2456,13 +2478,13 @@ class BookModel extends CI_Model
             ON `b`.`AccountCode` = `a`.`ParentCode` WHERE 
             `transactions`.`VoucherNo` = '$vouch_no' AND `transactions`.`LevelID` = '$level_id' 
             AND `transactions`.`VoucherType` = '$vouch_type' 
-            ".$where."
+            " . $where . "
             AND `transactions`.`Seprate_series_num` =  '" . $Seprate_series_num . "' AND transactions.is_delete = 0 ORDER BY `amounttype` , transactions.SequenceNo");
         } else {
             $query = $this->db->query("SELECT 
             CASE WHEN archived_transactions.Debit > 0 THEN 1 ELSE 2 END AS amounttype,
             `archived_transactions`.`ChequeNumber`, `archived_transactions`.`ChequeDate`, `company_structure`.`ParentCode` as `Comp_Parent`, `company_structure`.`LevelName`, `archived_transactions`.`PaidTo`, `archived_transactions`.`Remarks`, `archived_transactions`.`Description`, `archived_transactions`.`Debit`, `archived_transactions`.`Credit`, `archived_transactions`.`Permanent_VoucherNumber`, `archived_transactions`.`Permanent_VoucherDateH`, `archived_transactions`.`Permanent_VoucherDateG`, `a`.`AccountName`, `archived_transactions`.`Createdby`, `archived_transactions`.`CreatedOn`, `archived_transactions`.`UpdatedBy`, `archived_transactions`.`UpdatedOn`, `a`.`Type`,`departments`.`DepartmentName`, `a`.`AccountCode`, `archived_transactions`.`VoucherType`, `archived_transactions`.`VoucherNo`, `archived_transactions`.`VoucherDateH`, `archived_transactions`.`VoucherDateG`, `b`.`AccountName` as `ParentName` FROM `archived_transactions` JOIN `company_structure` ON `company_structure`.`id` = `archived_transactions`.`LevelID` JOIN `account_title` `a` ON `a`.`id` = `archived_transactions`.`AccountID` LEFT JOIN `departments` ON `departments`.`id` = `archived_transactions`.`DepartmentId` JOIN `account_title` `b` ON `b`.`AccountCode` = `a`.`ParentCode` WHERE `archived_transactions`.`VoucherNo` = '$vouch_no' AND `archived_transactions`.`LevelID` = '$level_id' AND `archived_transactions`.`VoucherType` = '$vouch_type' 
-".$where."
+" . $where . "
             AND
                 `archived_transactions`.`Seprate_series_num` = '" . $Seprate_series_num . "'
                 AND `archived_transactions`.is_delete = 0 ORDER BY `amounttype` ,
@@ -2471,13 +2493,13 @@ class BookModel extends CI_Model
         }
         return $query->result();
     }
- 
 
-    public function get_book_Amount($voucherType, $VoucherNumber, $level, $Seprate_series_num,$permit = '')
+
+    public function get_book_Amount($voucherType, $VoucherNumber, $level, $Seprate_series_num, $permit = '')
     {
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             if ($voucherType == 'BR' || $voucherType == 'CR') {
-                $this->db->select('transactions.Debit as BookAmount');                
+                $this->db->select('transactions.Debit as BookAmount');
             } elseif ($voucherType == 'BP' || $voucherType == 'CP') {
                 $this->db->select('transactions.Credit as BookAmount');
             }
@@ -2492,17 +2514,15 @@ class BookModel extends CI_Model
             $this->db->where('transactions.VoucherNo', $VoucherNumber);
             $this->db->where('transactions.is_delete', '0');
             $this->db->where('transactions.Seprate_series_num', $Seprate_series_num);
-            if($permit == ''){
+            if ($permit == '') {
                 $where = '`transactions`.`Permanent_VoucherNumber` IS NOT NULL';
                 $this->db->where($where);
-            }
-            else{
+            } else {
                 $where = '`transactions`.`Permanent_VoucherNumber` IS NULL';
                 $this->db->where($where);
             }
-           return  $this->db->get('transactions')->result(); 
-        }
-        else{
+            return $this->db->get('transactions')->result();
+        } else {
             if ($voucherType == 'BR' || $voucherType == 'CR') {
                 $this->db->select('archived_transactions.Debit as BookAmount');
                 $this->db->where('archived_transactions.is_delete', '0');
@@ -2520,21 +2540,20 @@ class BookModel extends CI_Model
             $this->db->where('archived_transactions.VoucherType', $voucherType);
             $this->db->where('archived_transactions.VoucherNo', $VoucherNumber);
             $this->db->where('archived_transactions.Seprate_series_num', $Seprate_series_num);
-            if($permit == ''){
+            if ($permit == '') {
                 $where = '`archived_transactions`.`Permanent_VoucherNumber` IS NOT NULL';
-                $this->db->where($where); 
-            }
-            else{
+                $this->db->where($where);
+            } else {
                 $where = '`archived_transactions`.`Permanent_VoucherNumber` IS NULL';
                 $this->db->where($where);
-            }    
-          return  $this->db->get('archived_transactions')->result();
-       }
-   }
+            }
+            return $this->db->get('archived_transactions')->result();
+        }
+    }
 
     public function get_transaction_ledger($chart_id, $to, $from, $ledgerof, $voucher_type)
     {
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             $this->db->select('company_structure.LevelName,transactions.LevelID,transactions.AccountID,transactions.VoucherNo,transactions.Permanent_VoucherNumber,transactions.VoucherType, transactions.VoucherDateG,transactions.Permanent_VoucherDateG, transactions.VoucherDateH,transactions.Permanent_VoucherDateH,transactions.Remarks, 
                 transactions.Debit as Debit,transactions.Credit Credit');
             $this->db->from('transactions');
@@ -2612,7 +2631,7 @@ class BookModel extends CI_Model
             } elseif ($voucher_type == 'IC') {
                 $this->db->where("archived_transactions.VoucherType", "IC");
             }
-           // $this->db->group_by('archived_transactions.Permanent_VoucherNumber');
+            // $this->db->group_by('archived_transactions.Permanent_VoucherNumber');
             $this->db->order_by("archived_transactions.Permanent_VoucherNumber");
 
             $trans_query = $this->db->get();
@@ -2663,7 +2682,7 @@ class BookModel extends CI_Model
     public function get_sum_debit_credit_tillDate($chart_id, $to, $ledgerof, $voucher_type)
     {
 
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             $this->db->select('SUM(Debit) as tdebit, SUM(Credit) as tcredit');
             $this->db->from('transactions');
             $this->db->where('transactions.is_delete', '0');
@@ -2716,10 +2735,11 @@ class BookModel extends CI_Model
             return $result;
         }
     }
+
     public function getTransactionsForAudit($v_rype, $auditOf, $to, $from, $level)
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('transactions.VoucherType,transactions.Permanent_VoucherNumber,transactions.VoucherNo');
             $this->db->from('transactions');
             $this->db->where('LevelID', $level);
@@ -2800,8 +2820,8 @@ class BookModel extends CI_Model
 
     public function getTransactionsDataForAudit($v_rype, $v_number, $auditOf, $to, $from, $level)
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('Debit,Credit,VoucherNo,Permanent_VoucherNumber,VoucherType,Permanent_VoucherDateG,Permanent_VoucherDateH,VoucherDateG,VoucherDateH,ChequeDate,account_title.AccountName,ChequeNumber,Description,Remarks');
             $this->db->from('transactions');
             $this->db->join('`account_title`', '`transactions`.`AccountID` = `account_title`.`id`');
@@ -2891,11 +2911,10 @@ class BookModel extends CI_Model
     {
 
 
-
         $childstransactions_d_c = array();
         $childstransactions_balances = array();
         $transactions = array();
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             foreach ($accounts as $account) {
                 $this->db->select('*');
                 $this->db->from('account_title');
@@ -2936,7 +2955,7 @@ class BookModel extends CI_Model
                                     $this->db->where('transactions.LevelID', $level_id);
                                 }
                                 $this->db->where('transactions.AccountID', $res->id);
-                                $this->db->where('transactions.is_delete','0');
+                                $this->db->where('transactions.is_delete', '0');
                                 $this->db->where('transactions.VoucherDateG <', $from);
                                 $deb_cre_fr_balance_transactions = $this->db->get_compiled_select();
                                 $this->db->select('account_title.id,account_title.AccountCode,account_title.AccountName,IFNULL(SUM(Debit),0) as Debit,IFNULL(SUM(Credit),0) as Credit');
@@ -2948,7 +2967,7 @@ class BookModel extends CI_Model
                                     $this->db->where('income.LevelID', $level_id);
                                 }
                                 $this->db->where('income.AccountID', $res->id);
-                                $this->db->where('income.is_delete','0');
+                                $this->db->where('income.is_delete', '0');
                                 $this->db->where('income.VoucherDateG < ', $from);
                                 $deb_cre_fr_balance_income = $this->db->get_compiled_select();
 
@@ -2961,7 +2980,7 @@ class BookModel extends CI_Model
                                 $balance = (($opening_balance[0]->OpeningBalance + $deb_cre_fr_balance[0]->Debit) - $deb_cre_fr_balance[0]->Credit);
 
                                 /** */
-                                $childstransactions_balances[$key_1][$key_2] = '';
+                                $childstransactions_balances[$key_1][$key_2][0] = '';
                                 $childstransactions_balances[$key_1][$key_2][0] = (object)array('id' => '', 'AccountName' => '', 'AccountCode' => '', 'OpeningBalance' => '', 'Debit' => '', 'Credit' => '', 'Balance' => '');
                                 $childstransactions_balances[$key_1][$key_2][0]->id = $deb_cre_fr_balance[0]->id;
                                 $childstransactions_balances[$key_1][$key_2][0]->AccountName = $deb_cre_fr_balance[0]->AccountName;
@@ -2975,7 +2994,7 @@ class BookModel extends CI_Model
                                 $this->db->from('transactions');
                                 $this->db->join('account_title', 'account_title.id = transactions.AccountID');
                                 $this->db->where('transactions.AccountID', $res->id);
-                                $this->db->where('transactions.is_delete','0');
+                                $this->db->where('transactions.is_delete', '0');
                                 if ($is_cons != '') {
                                     $this->db->where_in('transactions.LevelID', $level_id);
                                 } else {
@@ -2993,7 +3012,7 @@ class BookModel extends CI_Model
                                 $this->db->from('income');
                                 $this->db->join('account_title', 'account_title.id = income.AccountID');
                                 $this->db->where('income.AccountID', $res->id);
-                                $this->db->where('income.is_delete','0');
+                                $this->db->where('income.is_delete', '0');
                                 if ($is_cons != '') {
                                     $this->db->where_in('income.LevelID', $level_id);
                                 } else {
@@ -3034,7 +3053,7 @@ class BookModel extends CI_Model
                                         $this->db->select('account_title.id,account_title.AccountCode,account_title.AccountName,IFNULL(SUM(Debit),0) as Debit,IFNULL(SUM(Credit),0) as Credit');
                                         $this->db->from('transactions');
                                         $this->db->join('account_title', 'transactions.AccountID = account_title.id');
-                                        $this->db->where('transactions.is_delete','0');
+                                        $this->db->where('transactions.is_delete', '0');
                                         if ($is_cons != '') {
                                             $this->db->where_in('transactions.LevelID', $level_id);
                                         } else {
@@ -3047,7 +3066,7 @@ class BookModel extends CI_Model
                                         $this->db->select('account_title.id,account_title.AccountCode,account_title.AccountName,IFNULL(SUM(Debit),0) as Debit,IFNULL(SUM(Credit),0) as Credit');
                                         $this->db->from('income');
                                         $this->db->join('account_title', 'income.AccountID = account_title.id');
-                                        $this->db->where('income.is_delete','0');
+                                        $this->db->where('income.is_delete', '0');
                                         if ($is_cons != '') {
                                             $this->db->where_in('income.LevelID', $level_id);
                                         } else {
@@ -3075,7 +3094,7 @@ class BookModel extends CI_Model
                                         $this->db->from('transactions');
                                         $this->db->join('account_title', 'account_title.id = transactions.AccountID');
                                         $this->db->where('transactions.AccountID', $aitem->id);
-                                        $this->db->where('transactions.is_delete','0');
+                                        $this->db->where('transactions.is_delete', '0');
                                         if ($is_cons != '') {
                                             $this->db->where_in('transactions.LevelID', $level_id);
                                         } else {
@@ -3093,7 +3112,7 @@ class BookModel extends CI_Model
                                         $this->db->from('income');
                                         $this->db->join('account_title', 'account_title.id = income.AccountID');
                                         $this->db->where('income.AccountID', $aitem->id);
-                                        $this->db->where('income.is_delete','0');
+                                        $this->db->where('income.is_delete', '0');
                                         if ($is_cons != '') {
                                             $this->db->where_in('income.LevelID', $level_id);
                                         } else {
@@ -3223,7 +3242,7 @@ class BookModel extends CI_Model
                                 $balance = (($opening_balance[0]->OpeningBalance + $deb_cre_fr_balance[0]->Debit) - $deb_cre_fr_balance[0]->Credit);
 
                                 /** */
-                                $childstransactions_balances[$key_1][$key_2] = '';
+                                $childstransactions_balances[$key_1][$key_2][0] = '';
                                 $childstransactions_balances[$key_1][$key_2][0] = (object)array('id' => '', 'AccountName' => '', 'AccountCode' => '', 'OpeningBalance' => '', 'Debit' => '', 'Credit' => '', 'Balance' => '');
                                 $childstransactions_balances[$key_1][$key_2][0]->id = $deb_cre_fr_balance[0]->id;
                                 $childstransactions_balances[$key_1][$key_2][0]->AccountName = $deb_cre_fr_balance[0]->AccountName;
@@ -3306,7 +3325,7 @@ class BookModel extends CI_Model
                                         }
                                         $this->db->where('archived_transactions.AccountID', $aitem->id);
                                         $this->db->where('archived_transactions.VoucherDateG <', $to);
-                                            $this->db->where('archived_transactions.is_delete', '0');
+                                        $this->db->where('archived_transactions.is_delete', '0');
 
                                         // $this->db->where('archived_transactions.Year', $this->activeyear);
                                         $deb_cre_fr_balance_transactions = $this->db->get_compiled_select();
@@ -3427,14 +3446,11 @@ class BookModel extends CI_Model
 
     public function getTrailBalance_pre($accounts, $account_level, $level_id, $tb_of, $to, $from, $is_cons = '')
     {
-        // echo $from;
-        // exit();
         $childstransactions_d_c = array();
         $childstransactions_balances = array();
         $transactions = array();
-        if($this->year_status->Active == 1) {
-            // echo $to;
-            // exit();
+
+        if ($this->year_status->Active == 1) {
             foreach ($accounts as $account) {
                 $this->db->select('*');
                 $this->db->from('account_title');
@@ -3452,9 +3468,9 @@ class BookModel extends CI_Model
                 $results[] = $this->db->get()->result();                    // $results has accounts of level 1
             }
 
-// echo '<pre>';
-// print_r($results);
-// exit();
+            echo '<pre>';
+            print_r($results);
+            exit();
 
             foreach ($results as $key_1 => $result) {
                 if ($result != array()) {
@@ -3506,7 +3522,7 @@ class BookModel extends CI_Model
 // print_r($balance);
 // echo '</pre>';
 
-                                $childstransactions_balances[$key_1][$key_2] = '';
+                                $childstransactions_balances[$key_1][$key_2][0] = '';
                                 $childstransactions_balances[$key_1][$key_2][0] = (object)array('id' => '', 'AccountName' => '', 'AccountCode' => '', 'OpeningBalance' => '', 'Debit' => '', 'Credit' => '', 'Balance' => '');
                                 $childstransactions_balances[$key_1][$key_2][0]->id = $deb_cre_fr_balance[0]->id;
                                 $childstransactions_balances[$key_1][$key_2][0]->AccountName = $deb_cre_fr_balance[0]->AccountName;
@@ -3557,7 +3573,7 @@ class BookModel extends CI_Model
 // echo '<pre>'.print_r(echo '<pre>';
 // print_r($deb_cre_fr_balance);
 // echo '</pre>';).'<pre>';
-                            
+
 
                             }
                         } else {
@@ -3580,7 +3596,6 @@ class BookModel extends CI_Model
                                     $opening_balance = $this->db->get()->result();
 
 
-
                                     if ($opening_balance != array()) {
                                         $this->db->select('account_title.id,account_title.AccountCode,account_title.AccountName,IFNULL(SUM(Debit),0) as Debit,IFNULL(SUM(Credit),0) as Credit');
                                         $this->db->from('transactions');
@@ -3592,7 +3607,7 @@ class BookModel extends CI_Model
                                         }
                                         $this->db->where('transactions.AccountID', $aitem->id);
                                         $this->db->where('transactions.is_delete', '0');
-                                        $this->db->where('transactions.VoucherDateG <',$from);
+                                        $this->db->where('transactions.VoucherDateG <', $from);
                                         $deb_cre_fr_balance_transactions = $this->db->get_compiled_select();
 
                                         $this->db->select('account_title.id,account_title.AccountCode,account_title.AccountName,IFNULL(SUM(Debit),0) as Debit,IFNULL(SUM(Credit),0) as Credit');
@@ -3706,6 +3721,7 @@ class BookModel extends CI_Model
             }
         } else {
             foreach ($accounts as $account) {
+
                 $this->db->select('*');
                 $this->db->from('account_title');
                 if ($account_level == 'detail') {
@@ -3769,9 +3785,12 @@ class BookModel extends CI_Model
                                 $deb_cre_fr_balance = $this->db->query('Select id,AccountName,AccountCode, SUM(Debit) as Debit, SUM(Credit) as Credit From(' . $deb_cre_fr_balance_transactions . ' UNION ' . $deb_cre_fr_balance_income . ') as t')->result();
 
                                 $balance = (($opening_balance[0]->OpeningBalance + $deb_cre_fr_balance[0]->Debit) - $deb_cre_fr_balance[0]->Credit);
-
-                                $childstransactions_balances[$key_1][$key_2] = '';
+                                
+                                $childstransactions_balances[$key_1][$key_2][0] = '';
                                 $childstransactions_balances[$key_1][$key_2][0] = (object)array('id' => '', 'AccountName' => '', 'AccountCode' => '', 'OpeningBalance' => '', 'Debit' => '', 'Credit' => '', 'Balance' => '');
+//                                echo '<pre>';
+//                                var_dump($childstransactions_balances);
+//                                exit();
                                 $childstransactions_balances[$key_1][$key_2][0]->id = $deb_cre_fr_balance[0]->id;
                                 $childstransactions_balances[$key_1][$key_2][0]->AccountName = $deb_cre_fr_balance[0]->AccountName;
                                 $childstransactions_balances[$key_1][$key_2][0]->AccountCode = $deb_cre_fr_balance[0]->AccountCode;
@@ -3972,8 +3991,8 @@ class BookModel extends CI_Model
 
     public function getTransactionsForcheckbalance($levelid)
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('SUM(transactions.Debit) as Debit,SUM(transactions.Credit) as Credit');
             $this->db->from('transactions');
             $this->db->where('transactions.LevelID ', $levelid);
@@ -4013,8 +4032,8 @@ class BookModel extends CI_Model
         $this->db->where('LevelId', $levelid);
         $this->db->order_by('id', 'ASC');
         $result = $this->db->get()->result();
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             foreach ($result as $key => $value) {
                 $this->db->select('LinkID,IFNULL(SUM(transactions.Debit),0) as Debit,IFNULL(SUM(transactions.Credit),0) as Credit');
                 $this->db->from('transactions');
@@ -4060,8 +4079,8 @@ class BookModel extends CI_Model
 
     public function GetTransactionData($sum = '', $levelId, $accs, $from = '', $to = '', $trans_of)
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             if ($sum == '') {
                 $this->db->select('IFNULL(SUM(Debit),0) as Debit , IFNULL(SUM(Credit),0) as Credit');
             } else {
@@ -4135,8 +4154,8 @@ class BookModel extends CI_Model
 
     public function GetPreTranData($levelId, $accs, $to = '', $from = '')
     {
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             $this->db->select('IFNULL(SUM(Debit),0) as Debit , IFNULL(SUM(Credit),0) as Credit');
             $this->db->from('transactions');
             $this->db->where('LevelID', $levelId);
@@ -4156,13 +4175,13 @@ class BookModel extends CI_Model
     public function getOpeningBal($level_id, $Acc_ids)
     {
 
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             // echo 'true';
             // exit();
-        $this->db->select('IFNULL(SUM(OpeningBalance),0) as OpeningBalance');
+            $this->db->select('IFNULL(SUM(OpeningBalance),0) as OpeningBalance');
             $this->db->where_in('ChartOfAccountId', $Acc_ids);
-           // $this->db->where('LevelID',$level_id);
-            $result =  $this->db->get('chart_of_account_years');
+            // $this->db->where('LevelID',$level_id);
+            $result = $this->db->get('chart_of_account_years');
             return $result->row();
         } else {
             $this->db->select('IFNULL(SUM(OpeningBalance),0) as OpeningBalance');
@@ -4171,6 +4190,7 @@ class BookModel extends CI_Model
             return $this->db->get('archived_chart_of_account_years')->row();
         }
     }
+
     public function GetTaxDeductionVouchers($coaId, $to = '', $from = '')
     {
         $this->db->select('`transactions`.`VoucherNo`,`transactions`.`VoucherType`');
@@ -4181,14 +4201,15 @@ class BookModel extends CI_Model
         if ($to != "" && $from != "") {
             $this->db->where("transactions.VoucherDateG BETWEEN '" . $to . "' AND '" . $from . "'", NULL, FALSE);
         }
-         
-        if($this->year_status->Active == 1) {
+
+        if ($this->year_status->Active == 1) {
             return $this->db->get('transactions')->result();
         } else {
             // $this->db->where('archived_transactions.Year', $this->activeyear);
             return $this->db->get('archived_transactions')->result();
         }
     }
+
     public function GetTaxDeductionData($voucherNumber, $voucherType, $to = '', $from = '')
     {
 //        $this->db->select('`transactions`.`VoucherNo`,`transactions`.`VoucherType`');
@@ -4203,20 +4224,21 @@ class BookModel extends CI_Model
         $result1 = $this->db->query('SELECT year from closing_year')->result();
         $previous_year_date = $result1[0]->year;
         $hijri_date = $this->get_hijri_date($from);
-        if($this->year_status->Active == 1) {
+        if ($this->year_status->Active == 1) {
             return $this->db->get('transactions')->result();
         } else {
             // $this->db->where('archived_transactions.Year', $this->activeyear);
             return $this->db->get('archived_transactions')->result();
         }
     }
+
     public function UpdateCurrentBalance()
     {
         foreach ($_POST['LinkID'] as $key => $value) {
             $this->db->set('CurrentBalance', $_POST['Cal_Closing'][$key]);
             $this->db->where('ChartOfAccountId', $value);
-             
-        if($this->year_status->Active == 1) {
+
+            if ($this->year_status->Active == 1) {
                 $this->db->update('chart_of_account_years');
             } else {
                 // $this->db->where('archived_chart_of_account_years.Year', $this->activeyear);
@@ -4229,6 +4251,7 @@ class BookModel extends CI_Model
             return false;
         }
     }
+
     public function GetTransactionsForClosing($accs, $level)
     {
         $this->db->select('IFNULL(SUM(Debit),0) as Debit , IFNULL(SUM(Credit),0) as Credit');
@@ -4246,6 +4269,7 @@ class BookModel extends CI_Model
 
         return $this->db->query('Select SUM(Debit) as Debit, SUM(Credit) as Credit From(' . $transactions . ' UNION ' . $income . ') as t')->result();
     }
+
     public function GetVoucherForCashHolding($level, $to, $from)
     {
         $this->db->select('SUM(transactions.Credit)as credit,transactions.Id as t_id,transactions.VoucherType, transactions.Permanent_VoucherNumber,transactions.Seprate_series_num, transactions.VoucherNo, transactions.Permanent_VoucherDateG, transactions.Permanent_VoucherDateH, transactions.PaidTo, departments.DepartmentName, transactions.Remarks,company_structure.LevelName,transactions.LevelID');
@@ -4284,9 +4308,10 @@ class BookModel extends CI_Model
     public function GetVoucherFromCashHolding($date)
     {
         $this->db->select('*');
-        $this->db->where('Reportdate',$date);
+        $this->db->where('Reportdate', $date);
         return $this->db->get('cash_holding')->result();
     }
+
     public function GetVoucherForCashHoldingSave($level, $vouerno)
     {
         $this->db->select('SUM(transactions.Credit)as credit,transactions.Id as t_id,transactions.VoucherType, transactions.Permanent_VoucherNumber,transactions.Seprate_series_num, transactions.VoucherNo, transactions.Permanent_VoucherDateG, transactions.Permanent_VoucherDateH, transactions.PaidTo, departments.DepartmentName, transactions.Remarks,company_structure.LevelName,transactions.LevelID');
@@ -4302,12 +4327,13 @@ class BookModel extends CI_Model
         $this->db->order_by('transactions.Permanent_VoucherNumber');
         return $this->db->get()->result();
     }
+
     public function DeleteVoucher_old($date)
     {
-        $this->db->where('reportdate',$date);
+        $this->db->where('reportdate', $date);
         $this->db->delete('cash_holding');
 
-        $this->db->where('reportdate',$date);
+        $this->db->where('reportdate', $date);
         $this->db->delete('remaining_cash');
 
         if ($this->db->affected_rows() > 0) {
@@ -4316,10 +4342,11 @@ class BookModel extends CI_Model
             return false;
         }
     }
+
     public function GetVoucherFromRemainingCash($date)
     {
         $this->db->select('*');
-        $this->db->where('Reportdate',$date);
+        $this->db->where('Reportdate', $date);
         return $this->db->get('remaining_cash')->result();
 
     }
